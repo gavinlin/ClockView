@@ -44,7 +44,9 @@ class ClockView(context: Context, attrs: AttributeSet) : View(context, attrs) {
                 val step = 360f / 60f
                 val hourStep = 360f / 12f
                 secondDegrees = step * currentTime.seconds
-                hourDegrees = hourStep * currentTime.hours
+                val minutesDegreesForHours =
+                    currentTime.minutes / 2f
+                hourDegrees = hourStep * currentTime.hours + minutesDegreesForHours
                 minuteDegrees = step * currentTime.minutes
 
                 postInvalidate()
