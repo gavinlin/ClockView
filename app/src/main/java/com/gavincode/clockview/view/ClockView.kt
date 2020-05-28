@@ -5,7 +5,9 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import com.gavincode.clockview.R
+import kotlinx.coroutines.*
 import java.util.*
+import kotlin.coroutines.coroutineContext
 
 
 class ClockView(context: Context, attrs: AttributeSet) : View(context, attrs) {
@@ -37,26 +39,23 @@ class ClockView(context: Context, attrs: AttributeSet) : View(context, attrs) {
                 recycle()
             }
         }
-
-        val thread = Thread(Runnable {
-            while (true) {
-                val currentTime = Calendar.getInstance().time
-                val step = 360f / 60f
-                val hourStep = 360f / 12f
-                secondDegrees = step * currentTime.seconds
-                val minutesDegreesForHours =
-                    currentTime.minutes / 2f
-                hourDegrees = hourStep * currentTime.hours + minutesDegreesForHours
-                minuteDegrees = step * currentTime.minutes
-
-                postInvalidate()
-                Thread.sleep(1000)
-            }
-        })
-        thread.start()
     }
 
+    private suspend fun updateTime() {
+        while (coroutineContext.isActive) {
+            val currentTime = Calendar.getInstance().time
+            val step = 360f / 60f
+            val hourStep = 360f / 12f
+            secondDegrees = step * currentTime.seconds
+            val minutesDegreesForHours =
+                currentTime.minutes / 2f
+            hourDegrees = hourStep * currentTime.hours + minutesDegreesForHours
+            minuteDegrees = step * currentTime.minutes
 
+            postInvalidate()
+            delay(1000)
+        }
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
@@ -156,5 +155,19 @@ class ClockView(context: Context, attrs: AttributeSet) : View(context, attrs) {
         canvas.rotate(minuteDegrees, centerX, centerY)
         canvas.drawRoundRect(minuteRect, centerX, centerY, needlePaint)
         canvas.restore()
+    }
+
+    private var request: Job? = null
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        request = GlobalScope.launch(Dispatchers.Default) {
+            updateTime()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        request?.cancel()
     }
 }
